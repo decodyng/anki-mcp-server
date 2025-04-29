@@ -171,6 +171,20 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         }
       },
       {
+        name: "add_deck",
+        description: "Create a new deck in Anki. In almost all cases, this must be done before adding cards to the deck. Be sure to use the same deck name for all cards in the same chat, unless told otherwise.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            deckName: {
+              type: "string",
+              description: "The name of the deck to create"
+            }
+          },
+          required: ["deckName"]
+        }
+      },
+      {
         name: "add_card",
         description: "Create a new flashcard in Anki for the user. Must use HTML formatting only. IMPORTANT FORMATTING RULES:\n1. Must use HTML tags for ALL formatting - NO markdown\n2. Use <br> for ALL line breaks\n3. For code blocks, use <pre> with inline CSS styling\n4. Example formatting:\n   - Line breaks: <br>\n   - Code: <pre style=\"background-color: transparent; padding: 10px; border-radius: 5px;\">\n   - Lists: <ol> and <li> tags\n   - Bold: <strong>\n   - Italic: <em>",
         inputSchema: {
@@ -183,9 +197,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             back: {
               type: "string",
               description: "The back of the card. Must use HTML formatting only."
+            },
+            deckName: {
+              type: "string",
+              description: "The name of the deck to add the card to"
             }
           },
-          required: ["front", "back"]
+          required: ["front", "back", "deckName"]
         }
       },
       {
@@ -253,13 +271,26 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       };
     }
 
+    case "add_deck": {
+      const deckName = String(args.deckName);
+      const deck = {"deck": deckName}
+      await client.deck.createDeck(deck);
+      return {
+        content: [{
+          type: "text",
+          text: `Created deck ${deckName}`
+        }]
+      };
+    }
+
     case "add_card": {
       const front = String(args.front);
       const back = String(args.back);
+      const deckName = String(args.deckName);
 
       const note = {
         note: {
-          deckName: 'Default',
+          deckName: deckName,
           fields: {
             Back: back,
             Front: front,
